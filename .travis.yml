@@ -1,3 +1,7 @@
+arch:
+  - amd64
+  - arm64
+
 services:
   - docker
 
@@ -13,7 +17,15 @@ after_script:
 
 before_deploy:
   - echo "$REGISTRY_PASS" | docker login -u "$REGISTRY_USER" --password-stdin
-  - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:latest"
+  - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:${TRAVIS_CPU_ARCH}:latest"
+  - if ["$TRAVIS_CPU_ARCH" == "arm64"]; then \
+    docker manifest create "${IMAGE_NAME}:latest" \
+    "${IMAGE_NAME}:arm64:latest" "${IMAGE_NAME}:amd64:latest" &&\
+    docker manifest annonate "${IMAGE_NAME}:latest"\
+    "${IMAGE_NAME}:arm64:latest" --arch arm64 &&\
+    docker manifest annonate "${IMAGE_NAME}:latest"\
+    "${IMAGE_NAME}:amd6:latest" --arch amd64 &&\
+    docker manifest push "${IMAGE_NAME}:latest"; fi;
 
 deploy:
   provider: script
